@@ -1,7 +1,7 @@
-Procedural Storytelling-related Algorithms, Data-sets and Resources by Brett Kromkamp
-=====================================================================================
+Procedural Storytelling-related Scripts, Datasets and Resources by Brett Kromkamp
+=================================================================================
 
-As the title implies, this repo is (will be) a collection of scripts, data-sets and algorithms that are especially relevant for procedural storytelling. Areas to explore include world-building, semantic modeling for narratives in general and procedural generation of plots and characters in particular. 
+As the title implies, this repo is (will be) a collection of scripts, datasets, algorithms and resources that are especially relevant for procedural storytelling. Areas to explore include world-building, semantic modeling for narratives in general and procedural generation of plots and characters in particular. 
 
 .. image:: resources/brave-robot10.png
    :alt: Military robot from the Brave Robot universe
