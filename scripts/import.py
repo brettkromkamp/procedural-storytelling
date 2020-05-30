@@ -15,7 +15,7 @@ from topicdb.core.models.association import Association
 
 SETTINGS_FILE_PATH = os.path.join(os.path.dirname(__file__), "settings.ini")
 USER_IDENTIFIER = 1
-TOPIC_MAP_IDENTIFIER = 5
+TOPIC_MAP_IDENTIFIER = 6
 SPACE = " "
 TAB = "\t"
 SPACES_PER_TAB = 4
@@ -41,7 +41,7 @@ def sibling_index(siblings, identifier):
 
 def create_tree():
     topics_file = open(
-        "/home/brettk/Source/procedural-storytelling/resources/elon-musk.dat", "r")
+        "/home/brettk/Source/procedural-storytelling/worldbuilding/topics.dat", "r")
     stack = {}
     for line in topics_file:
         index = int(line.count(SPACE) / SPACES_PER_TAB)
@@ -49,47 +49,42 @@ def create_tree():
         stack[index] = topic_identifier
 
         if index == 0:  # Root node
-            tree.add_node(topic_identifier, node_type='identifier',
-                          edge_type='relationship')
+            tree.add_node(topic_identifier, node_type='identifier', edge_type='relationship')
         else:
             tree.add_node(
                 topic_identifier, parent_pointer=stack[index - 1], node_type='identifier', edge_type='relationship')
 
 
-def create_topics(store, topic_map_identifier):
+def create_topic(store, topic_map_identifier, topic_identifier, topic_name):
     store.open()
+    if not topic_store.topic_exists(topic_map_identifier, topic_identifier):
+        topic = Topic(topic_identifier, 'topic', topic_name)
+        text_occurrence = Occurrence(
+            instance_of="text",
+            topic_identifier=topic.identifier,
+            scope=UNIVERSAL_SCOPE,
+            resource_data="Topic automatically created.",
+        )
+        timestamp = str(datetime.now())
+        modification_attribute = Attribute("modification-timestamp", timestamp, topic.identifier, data_type=DataType.TIMESTAMP)
+        # Persist objects to the topic store
+        topic_store.set_topic(topic_map_identifier, topic)
+        topic_store.set_occurrence(topic_map_identifier, text_occurrence)
+        topic_store.set_attribute(topic_map_identifier, modification_attribute)
+    store.close()
 
-    for node_identifier in tree.traverse('elon-musk', mode=TraversalMode.DEPTH):
 
+def create_topics(store, topic_map_identifier):
+    for node_identifier in tree.traverse('worldbuilding', mode=TraversalMode.DEPTH):
         normalised_topic_name = " ".join([
             word.capitalize()
             for word in node_identifier.split("-")
         ])
-        if not topic_store.topic_exists(topic_map_identifier, node_identifier):
-            topic = Topic(node_identifier, 'topic', normalised_topic_name)
-            text_occurrence = Occurrence(
-                instance_of="text",
-                topic_identifier=topic.identifier,
-                scope=UNIVERSAL_SCOPE,
-                resource_data="Topic automatically created.",
-            )
-            timestamp = str(datetime.now())
-            modification_attribute = Attribute(
-                "modification-timestamp", timestamp, topic.identifier, data_type=DataType.TIMESTAMP,
-            )
-
-            # Persist objects to the topic store
-            topic_store.set_topic(topic_map_identifier, topic)
-            topic_store.set_occurrence(topic_map_identifier, text_occurrence)
-            topic_store.set_attribute(
-                topic_map_identifier, modification_attribute)
-
-    store.close()
+        create_topic(store, topic_map_identifier, node_identifier, normalised_topic_name)
 
 
 def create_association(store, topic_map_identifier, src_topic_ref, src_role_spec, dest_topic_ref, dest_role_spec):
     store.open()
-
     association = Association(
         instance_of="navigation",
         scope=UNIVERSAL_SCOPE,
@@ -98,15 +93,13 @@ def create_association(store, topic_map_identifier, src_topic_ref, src_role_spec
         src_role_spec=src_role_spec,
         dest_role_spec=dest_role_spec,
     )
-
     # Persist object to the topic store
     store.set_association(topic_map_identifier, association)
-
     store.close()
 
 
 def create_associations(store, topic_map_identifier):
-    for identifier in tree.traverse('elon-musk', mode=TraversalMode.DEPTH):
+    for identifier in tree.traverse('worldbuilding', mode=TraversalMode.DEPTH):
         node = tree[identifier]
         navigation = None
         if node.parent:
@@ -121,7 +114,7 @@ def create_associations(store, topic_map_identifier):
                 down_identifier = identifier
                 previous_identifier = siblings[index - 1].identifier
                 next_identifier = identifier
-                
+
                 create_association(store, topic_map_identifier, down_identifier, "topic", up_identifier, "up")
                 create_association(store, topic_map_identifier, previous_identifier, "previous", next_identifier, "next")
             else:  # In-between siblings
@@ -140,10 +133,8 @@ if __name__ == "__main__":
         port=database_port,
         dbname=database_name,
     )
-
     tree = Tree()
     create_tree()
-    tree.display('elon-musk')
     print("-"*80)
     print("Creating topics...")
     create_topics(topic_store, TOPIC_MAP_IDENTIFIER)
@@ -152,7 +143,3 @@ if __name__ == "__main__":
     print("Creating associations...")
     create_associations(topic_store, TOPIC_MAP_IDENTIFIER)
     print("Associations created!")
-    topic_store.open()
-    store_tree = topic_store.get_topics_network(TOPIC_MAP_IDENTIFIER, "elon-musk")
-    topic_store.close()
-    store_tree.display('elon-musk')
